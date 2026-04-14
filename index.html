@@ -919,14 +919,14 @@ footer {
       <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:13px; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.6); margin-bottom:14px;">Standard</div>
       <div style="font-family:'Inter',sans-serif; font-weight:800; font-size:52px; letter-spacing:-2px; color:#fff; line-height:1; margin-bottom:8px;">$1,500</div>
       <div style="font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:0.5px; margin-bottom:24px;">$750 due now &bull; $750 at launch</div>
-      <button class="contact-submit" style="width:100%;">Start Standard</button>
+      <button class="contact-submit" style="width:100%;" onclick="startPlan('standard')">Start Standard</button>
     </div>
     <div style="background:rgba(255,255,255,0.1); border:2px solid var(--blue); border-radius:10px; padding:32px 28px; text-align:center; position:relative;">
       <div style="position:absolute; top:-14px; left:50%; transform:translateX(-50%); background:var(--blue); color:#fff; font-family:'Inter',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; padding:5px 16px; border-radius:999px; text-transform:uppercase; white-space:nowrap;">BEST VALUE</div>
       <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:13px; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,0.6); margin-bottom:14px;">Pro</div>
       <div style="font-family:'Inter',sans-serif; font-weight:800; font-size:52px; letter-spacing:-2px; color:#fff; line-height:1; margin-bottom:8px;">$2,500</div>
       <div style="font-size:12px; color:rgba(255,255,255,0.5); letter-spacing:0.5px; margin-bottom:24px;">$1,250 due now &bull; $1,250 at launch</div>
-      <button class="contact-submit" style="width:100%;">Start Pro</button>
+      <button class="contact-submit" style="width:100%;" onclick="startPlan('pro')">Start Pro</button>
     </div>
   </div>
   <p style="margin-top:24px; font-size:13px; color:rgba(255,255,255,0.4);">Questions before you commit? Email us at <a href="mailto:hello@sitebolt.co" style="color:var(--blue); text-decoration:none;">hello@sitebolt.co</a></p>
@@ -947,6 +947,26 @@ footer {
   <div style="font-size:13px;">Nashville, TN &bull; Serving businesses nationwide</div>
 </footer>
 <script>
+  // ===== STRIPE PAYMENT LINKS =====
+  // Replace the placeholders below with real Stripe Payment Link URLs from
+  // https://dashboard.stripe.com/payment-links
+  // Standard: $750 deposit (50% of $1,500), Pro: $1,250 deposit (50% of $2,500).
+  // Set success_url to https://sitebolt.co/intake?plan=standard (or pro) so clients
+  // land directly on their intake form after paying.
+  const STRIPE_LINKS = {
+    standard: 'https://buy.stripe.com/REPLACE_STANDARD_DEPOSIT',
+    pro: 'https://buy.stripe.com/REPLACE_PRO_DEPOSIT'
+  };
+  function startPlan(plan) {
+    const link = STRIPE_LINKS[plan];
+    if (!link || link.includes('REPLACE_')) {
+      // Payment link not yet configured — send straight to intake so we don't lose the lead.
+      window.location.href = '/intake?plan=' + plan;
+      return;
+    }
+    window.location.href = link;
+  }
+
   async function callClaude(prompt, maxTokens = 1000) {
     const response = await fetch("https://api.sitebolt.co/claude", {
       method: "POST",

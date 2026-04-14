@@ -513,6 +513,27 @@ input::placeholder, textarea::placeholder { color: #b0b0b0; }
 </div>
 
 <script>
+// ===== STRIPE PAYMENT LINKS =====
+// Replace with real Stripe Payment Link URLs. Standard = $750 deposit, Pro = $1,250 deposit.
+// Both links should redirect to https://sitebolt.co/intake?plan=standard (or pro) on success.
+const STRIPE_LINKS = {
+  standard: 'https://buy.stripe.com/REPLACE_STANDARD_DEPOSIT',
+  pro: 'https://buy.stripe.com/REPLACE_PRO_DEPOSIT'
+};
+const PLAN_META = {
+  standard: { label: 'Standard', total: 1500, deposit: 750 },
+  pro: { label: 'Pro', total: 2500, deposit: 1250 }
+};
+function goToStripe(plan) {
+  const link = STRIPE_LINKS[plan];
+  if (!link || link.includes('REPLACE_')) {
+    alert('Payment link not yet configured. Email hello@sitebolt.co and we will send you a secure payment link directly.');
+    window.location.href = 'mailto:hello@sitebolt.co?subject=' + encodeURIComponent('Deposit payment — ' + PLAN_META[plan].label);
+    return;
+  }
+  window.location.href = link;
+}
+
 // ===== STEP DEFINITIONS =====
 // Each step has: id, title, sub, fields[], plans (which plans see this step)
 const STEPS = [
@@ -1059,6 +1080,10 @@ Return the brief as plain markdown. No code fences. Start with a single H1: "Pro
         messages: [{ role: "user", content: prompt }]
       })
     });
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error("API error " + response.status + ": " + errText);
+    }
     const data = await response.json();
     const brief = data.content[0].text;
     renderBrief(brief);
@@ -1095,10 +1120,35 @@ function renderBrief(brief) {
       </div>
     </div>
     <div class="brief-body" id="briefBody">${escapeHtml(brief)}</div>
+
+    <!-- DEPOSIT CTA -->
+    <div style="margin-top:40px; padding:32px; background:linear-gradient(135deg, #111827 0%, #1a2f52 100%); border-radius:12px; color:#fff;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:24px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:260px;">
+          <div style="font-size:11px; letter-spacing:3px; text-transform:uppercase; color:var(--blue); font-weight:700; margin-bottom:8px;">Lock In Your Build Slot</div>
+          <div style="font-family:'DM Serif Display', serif; font-size:32px; line-height:1.15; margin-bottom:12px;">Pay your 50% deposit and we start today.</div>
+          <div style="font-size:14px; line-height:1.55; color:rgba(255,255,255,0.7);">
+            ${PLAN_META[state.plan].label} package: <strong style="color:#fff;">$${PLAN_META[state.plan].total.toLocaleString()}</strong> total.
+            <strong style="color:#fff;">$${PLAN_META[state.plan].deposit.toLocaleString()}</strong> due now, the rest at launch.
+            Your site ships in 14 days.
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:stretch; gap:8px;">
+          <button class="btn btn-primary" style="min-width:240px; font-size:15px; padding:14px 24px;" id="payDepositBtn">
+            Pay $${PLAN_META[state.plan].deposit.toLocaleString()} deposit →
+          </button>
+          <div style="font-size:11px; color:rgba(255,255,255,0.4); text-align:center;">Secure checkout by Stripe</div>
+        </div>
+      </div>
+    </div>
+
     <div class="btn-row" style="justify-content:flex-start; margin-top:32px;">
       <button class="btn btn-text" onclick="state.currentStep = activeSteps().length - 1; render(); scrollTop();">← Back to edit answers</button>
     </div>
   `;
+
+  document.getElementById('payDepositBtn').onclick = () => goToStripe(state.plan);
+
 
   document.getElementById('copyBriefBtn').onclick = () => {
     navigator.clipboard.writeText(brief);
