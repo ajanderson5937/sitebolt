@@ -1152,118 +1152,93 @@ footer {
     return data.content[0].text;
   }
   async function runHeroAudit() {
-    const rawUrl = document.getElementById('heroUrl').value.trim();
-    if (!rawUrl) { alert('Enter your website URL first.'); return; }
-    const url = rawUrl.match(/^https?:\/\//) ? rawUrl : 'https://' + rawUrl;
-    const heroEmail = (document.getElementById('heroEmail').value || '').trim();
-    const btn = document.getElementById('heroAuditBtn');
-    btn.disabled = true;
-    document.getElementById('audit-form').style.display = 'none';
-    document.getElementById('audit-loading').style.display = 'flex';
-    document.getElementById('audit-result').style.display = 'none';
-
-    // Capture as lead immediately (fire and forget)
-    fetch('https://api.sitebolt.co/intake', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        contactEmail: heroEmail || 'not provided',
-        bizWebsite: url,
-        bizName: new URL(url).hostname.replace('www.', ''),
-        plan: 'AUDIT',
-        contactName: '',
-        referralSource: 'Homepage site audit widget',
-        submittedAt: new Date().toISOString()
-      })
-    }).catch(() => {});
-
-    try {
-      // Step 1: Get REAL scores from Google PageSpeed Insights API (free, no key needed for low volume)
-      const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=performance&category=seo&category=best-practices&strategy=mobile`;
-      const psiResp = await fetch(psiUrl);
-      let psiData = null;
-      let perfScore = null, seoScore = null, speedScore = null, mobileScore = null;
-      let lcp = null, fcp = null, cls = null, tbt = null;
-
-      if (psiResp.ok) {
-        psiData = await psiResp.json();
-        const cats = psiData.lighthouseResult?.categories || {};
-        const audits = psiData.lighthouseResult?.audits || {};
-        perfScore = Math.round((cats.performance?.score || 0) * 100);
-        seoScore = Math.round((cats.seo?.score || 0) * 100);
-        mobileScore = Math.round((cats['best-practices']?.score || 0) * 100);
-        // Speed score = average of perf + a boost/penalty based on LCP
-        lcp = audits['largest-contentful-paint']?.numericValue;
-        fcp = audits['first-contentful-paint']?.numericValue;
-        cls = audits['cumulative-layout-shift']?.numericValue;
-        tbt = audits['total-blocking-time']?.numericValue;
-        speedScore = perfScore; // Use performance score as speed
-      }
-
-      // Step 2: Have Claude interpret the REAL data into actionable issues
-      const overall = psiData ? Math.round((perfScore + seoScore + mobileScore) / 3) : null;
-      const prompt = `You are a website conversion expert for Sitebolt.co. A small business owner just graded their site: ${url}
-
-REAL Google PageSpeed data (mobile):
-- Performance: ${perfScore ?? 'unavailable'}/100
-- SEO: ${seoScore ?? 'unavailable'}/100
-- Best Practices / Mobile: ${mobileScore ?? 'unavailable'}/100
-- Largest Contentful Paint: ${lcp ? (lcp/1000).toFixed(1) + 's' : 'unavailable'}
-- First Contentful Paint: ${fcp ? (fcp/1000).toFixed(1) + 's' : 'unavailable'}
-- Cumulative Layout Shift: ${cls?.toFixed(3) ?? 'unavailable'}
-- Total Blocking Time: ${tbt ? Math.round(tbt) + 'ms' : 'unavailable'}
-
-Return ONLY valid JSON, no markdown:
-{
-  "overall": ${overall ?? 'number 0-100 based on your best estimate'},
-  "mobile": ${mobileScore ?? 'number 0-100'},
-  "seo": ${seoScore ?? 'number 0-100'},
-  "speed": ${speedScore ?? 'number 0-100'},
-  "issues": [
-    { "severity": "critical", "text": "specific issue based on the real data above" },
-    { "severity": "critical", "text": "another real issue" },
-    { "severity": "high", "text": "another issue" }
-  ],
-  "pitch": "one sentence about how Sitebolt could fix these issues. Be specific to their scores."
-}
-Use the REAL scores provided. If data was unavailable, estimate conservatively. Include 3-4 issues based on the actual metrics. Focus on what a business owner would care about (lost customers, slow loading, poor mobile experience). Be honest but compelling.`;
-
-      const raw = await callClaude(prompt);
-      const data = JSON.parse(raw.replace(/```json|```/g, '').trim());
-
-      // Color the scores based on actual values
-      function scoreColor(el, val) {
-        el.className = 'score-chip-num ' + (val >= 80 ? 'score-green' : val >= 50 ? 'score-amber' : 'score-red');
-      }
-      const oEl = document.getElementById('r-overall');
-      const mEl = document.getElementById('r-mobile');
-      const sEl = document.getElementById('r-seo');
-      const spEl = document.getElementById('r-speed');
-      oEl.textContent = data.overall;
-      mEl.textContent = data.mobile;
-      sEl.textContent = data.seo;
-      spEl.textContent = data.speed;
-      scoreColor(oEl, data.overall);
-      scoreColor(mEl, data.mobile);
-      scoreColor(sEl, data.seo);
-      scoreColor(spEl, data.speed);
-
-      document.getElementById('r-pitch').textContent = data.pitch;
-      const issueHtml = data.issues.map(i => `
-        <div class="result-issue">
-          <div class="issue-dot ${i.severity === 'critical' ? 'dot-red' : 'dot-amber'}"></div>
-          <span>${i.text}</span>
-        </div>
-      `).join('');
-      document.getElementById('r-issues').innerHTML = issueHtml;
-      document.getElementById('audit-loading').style.display = 'none';
-      document.getElementById('audit-result').style.display = 'block';
-    } catch(e) {
-      document.getElementById('audit-loading').style.display = 'none';
-      document.getElementById('audit-form').style.display = 'block';
-      alert('Analysis failed. Check your connection and try again.');
+    var urlEl = document.getElementById('heroUrl');
+    var emailEl = document.getElementById('heroEmail');
+    var btn = document.getElementById('heroAuditBtn');
+    var loadingEl = document.getElementById('audit-loading');
+    var resultEl = document.getElementById('audit-result');
+    var url = ((urlEl && urlEl.value) || '').trim();
+    var email = ((emailEl && emailEl.value) || '').trim();
+    if (!url) { if (urlEl) urlEl.focus(); return; }
+    if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+    if (btn) btn.disabled = true;
+    if (loadingEl) loadingEl.style.display = 'block';
+    if (resultEl) resultEl.style.display = 'none';
+    async function postLead(scores, issues, pitch, psiError) {
+      if (!email) return;
+      try {
+        await fetch('/intake', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plan: 'audit',
+            name: 'Audit lead',
+            email: email,
+            website: url,
+            notes: 'Audit lead from homepage grader' + (psiError ? ' (PSI failed: ' + psiError + ')' : ''),
+            audit: { url: url, scores: scores, issues: issues, pitch: pitch, psiError: psiError }
+          })
+        });
+      } catch (_) {}
     }
-    btn.disabled = false;
+    var scores = null;
+    try {
+      var api = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed' + '?url=' + encodeURIComponent(url) + '&strategy=mobile&category=performance&category=accessibility&category=best-practices&category=seo';
+      var r = await fetch(api);
+      if (!r.ok) throw new Error('PageSpeed ' + r.status);
+      var j = await r.json();
+      var cats = j && j.lighthouseResult && j.lighthouseResult.categories;
+      if (!cats) throw new Error('No categories');
+      var perf = (cats.performance && typeof cats.performance.score === 'number') ? Math.round(cats.performance.score*100) : null;
+      var a11y = (cats.accessibility && typeof cats.accessibility.score === 'number') ? Math.round(cats.accessibility.score*100) : null;
+      var best = (cats['best-practices'] && typeof cats['best-practices'].score === 'number') ? Math.round(cats['best-practices'].score*100) : null;
+      var seo  = (cats.seo && typeof cats.seo.score === 'number') ? Math.round(cats.seo.score*100) : null;
+      if (perf == null || a11y == null || best == null || seo == null) throw new Error('PSI returned incomplete scores');
+      var overall = Math.round((perf + a11y + best + seo) / 4);
+      scores = { overall: overall, perf: perf, mobile: perf, a11y: a11y, best: best, seo: seo };
+    } catch (err) {
+      await postLead(null, [], '', (err && err.message) || String(err));
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (btn) btn.disabled = false;
+      if (resultEl) resultEl.style.display = 'block';
+      var pE = document.getElementById('r-pitch');
+      if (pE) pE.innerHTML = '<strong>We couldn\'t reach PageSpeed Insights for this URL.</strong><br>This usually means the URL is unreachable, behind a login, or Google\'s daily free quota is used up. ' + (email ? 'Your details are saved and a human will follow up with a full report.' : 'Drop your email above and try again and we\'ll send a full report.');
+      var ids = ['r-overall','r-mobile','r-seo','r-speed'];
+      for (var i=0;i<ids.length;i++) { var ee = document.getElementById(ids[i]); if (ee) ee.textContent = '\u2014'; }
+      var iEl = document.getElementById('r-issues');
+      if (iEl) iEl.innerHTML = '';
+      return;
+    }
+    var scoreEls = { 'r-overall': scores.overall, 'r-mobile': scores.mobile, 'r-seo': scores.seo, 'r-speed': scores.perf };
+    for (var id in scoreEls) { var eS = document.getElementById(id); if (eS) eS.textContent = String(scoreEls[id]); }
+    var issues = [], pitch = '';
+    try {
+      var prompt = 'You are auditing the website ' + url + ' for a small-business owner. Real Google PageSpeed Insights scores (0-100):\n- Overall: ' + scores.overall + '\n- Performance: ' + scores.perf + '\n- Accessibility: ' + scores.a11y + '\n- Best Practices: ' + scores.best + '\n- SEO: ' + scores.seo + '\n\nReturn STRICT JSON ONLY (no markdown, no code fences): {"issues":[{"title":"...","detail":"..."}],"pitch":"..."}. Rules: Do NOT flag any category scoring 80 or above as a problem. Only include categories below 80 as issues. If every category is 80 or above, return issues:[] and write a pitch that affirms the site is in good shape and describes how Sitebolt can help with growth (content, conversion, new pages). Keep the pitch under 80 words, honest, and matched to the actual numbers. Never say the site failed to load.';
+      var resp = await callClaude(prompt);
+      var m = resp && resp.match(/\{[\s\S]*\}/);
+      if (m) { var parsed = JSON.parse(m[0]); if (Array.isArray(parsed.issues)) issues = parsed.issues; if (typeof parsed.pitch === 'string') pitch = parsed.pitch; }
+    } catch (_) {}
+    var pitchEl = document.getElementById('r-pitch');
+    if (pitchEl) pitchEl.textContent = pitch || 'Your site fundamentals look solid. We can help you turn this foundation into more leads with better content, sharper conversion paths, and new pages that rank.';
+    var issuesEl = document.getElementById('r-issues');
+    if (issuesEl) {
+      issuesEl.innerHTML = '';
+      if (!issues.length) {
+        issuesEl.innerHTML = '<div style="color:#0a8a2a;font-weight:600;">No critical issues found. Your site is performing well.</div>';
+      } else {
+        for (var ii=0; ii<issues.length; ii++) {
+          var it = issues[ii];
+          var row = document.createElement('div');
+          row.style.marginBottom = '10px';
+          row.innerHTML = '<strong>' + (it.title || '') + '</strong><br><span style="color:#555;">' + (it.detail || '') + '</span>';
+          issuesEl.appendChild(row);
+        }
+      }
+    }
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (resultEl) resultEl.style.display = 'block';
+    if (btn) btn.disabled = false;
+    await postLead(scores, issues, pitch, null);
   }
 </script>
 </body>
