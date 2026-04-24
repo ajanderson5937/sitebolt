@@ -1186,7 +1186,7 @@ footer {
     try {
       // Step 1: Get REAL scores from Google PageSpeed Insights API.
       // If this fails we do NOT fabricate scores — we show an honest error.
-      const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=performance&category=seo&category=best-practices&strategy=mobile`;
+      const psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&category=performance&category=seo&category=best-practices&strategy=mobile&key=AIzaSyBfz_mdofeWAZK1M2dOtcxNAbLf-jAjFGY`;
       const psiResp = await fetch(psiUrl);
       if (!psiResp.ok) {
         throw new Error('PSI request failed with status ' + psiResp.status);
