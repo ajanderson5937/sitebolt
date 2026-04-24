@@ -1308,6 +1308,16 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
       alert("We couldn't reach Google's PageSpeed service for that URL. Try again in a moment, or check the URL is public.");
       // Still capture the lead so we don't lose them when PSI is flaky
       if (email) {
+        // Meta Pixel: fire Lead even if PSI failed â€” email + URL is still the conversion.
+        try {
+          if (typeof fbq === 'function') {
+            fbq('track', 'Lead', {
+              content_name: 'Free Site Grade',
+              content_category: 'audit',
+              status: 'psi_failed'
+            });
+          }
+        } catch(err) {}
         fetch('https://api.sitebolt.co/intake', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
