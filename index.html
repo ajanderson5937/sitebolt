@@ -1114,6 +1114,21 @@ footer {
   </div>
 </footer>
 <script>
+  // Read a cookie value by name (Meta _fbp / _fbc CAPI dedup)
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[2]) : '';
+  }
+  // Build the _capi block forwarded to /intake so server-side CAPI can dedup
+  function buildCapiBlock(eventId) {
+    return {
+      eventId,
+      fbp: getCookie('_fbp'),
+      fbc: getCookie('_fbc'),
+      url: window.location.href
+    };
+  }
+
   // ===== STRIPE PAYMENT LINKS =====
   // Replace the placeholders below with real Stripe Payment Link URLs from
   // https://dashboard.stripe.com/payment-links
@@ -1276,13 +1291,15 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
       // Uses the existing /intake Worker endpoint with plan="audit" marker so we
       // don't have to stand up a separate endpoint. AJ receives a Resend email.
       if (email) {
+        // CAPI dedup: same event_id sent to both fbq() and the Worker.
+        const capiEventId = 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
         // Meta Pixel: Lead = email submitted with audit. This is the real conversion.
         try {
           if (typeof fbq === 'function') {
             fbq('track', 'Lead', {
               content_name: 'Free Site Grade',
               content_category: 'audit'
-            });
+            }, { eventID: capiEventId });
           }
         } catch(e) {}
         const issuesText = (data.issues || []).map(i => `[${i.severity}] ${i.text}`).join(' | ');
@@ -1297,7 +1314,8 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
             bizWebsite: url,
             bizDescription: `PageSpeed mobile â€” Overall: ${overall}, Mobile: ${mobileScore}, SEO: ${seoScore}, Speed: ${speedScore}`,
             additionalNotes: `Issues: ${issuesText}. Pitch: ${data.pitch || ''}`,
-            submittedAt: new Date().toISOString()
+            submittedAt: new Date().toISOString(),
+            _capi: buildCapiBlock(capiEventId)
           })
         }).catch(err => console.error('Lead capture failed:', err));
       }
@@ -1308,6 +1326,7 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
       alert("We couldn't reach Google's PageSpeed service for that URL. Try again in a moment, or check the URL is public.");
       // Still capture the lead so we don't lose them when PSI is flaky
       if (email) {
+        const capiEventId = 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
         // Meta Pixel: fire Lead even if PSI failed â€” email + URL is still the conversion.
         try {
           if (typeof fbq === 'function') {
@@ -1315,7 +1334,7 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
               content_name: 'Free Site Grade',
               content_category: 'audit',
               status: 'psi_failed'
-            });
+            }, { eventID: capiEventId });
           }
         } catch(err) {}
         fetch('https://api.sitebolt.co/intake', {
@@ -1328,7 +1347,8 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already â‰
             bizName: `Audit lead (PSI failed): ${url}`,
             bizWebsite: url,
             additionalNotes: `PSI failed before audit completed. Error: ${String(e && e.message || e)}`,
-            submittedAt: new Date().toISOString()
+            submittedAt: new Date().toISOString(),
+            _capi: buildCapiBlock(capiEventId)
           })
         }).catch(err => console.error('Lead capture failed:', err));
       }
