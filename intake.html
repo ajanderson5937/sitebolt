@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="facebook-domain-verification" content="bkx25860wjkymksdpzmuskczhc9a5z" />
+<meta name="facebook-domain-verification" content="bkx25860wjkymksdpzmuskczhc9a5z" />
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-3XC7QTSLD8"></script>
 <script>
@@ -29,7 +29,7 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1861130397882262&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
-<title>Sitebolt — Project Intake Form</title>
+<title>Sitebolt â Project Intake Form</title>
 <meta name="description" content="Tell us about your business so we can build the perfect website. Sitebolt project intake form.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a2f52'/%3E%3Cg transform='translate(5 5) scale(1.57)'%3E%3Cpath d='M11 0L3 8h4l-2 6 8-8h-4l2-6z' fill='%23378ADD'/%3E%3C/g%3E%3C/svg%3E">
@@ -592,13 +592,13 @@ footer a {
 
         <div class="field">
           <label>Brand colors <span class="optional">(if you have them)</span></label>
-          <input type="text" id="brandColors" placeholder="Navy blue, white, gold accent — or 'no preference'">
+          <input type="text" id="brandColors" placeholder="Navy blue, white, gold accent â or 'no preference'">
         </div>
 
         <div class="field">
           <label>Sites you like <span class="optional">(inspiration)</span></label>
           <textarea id="siteInspiration" placeholder="Paste 1-3 URLs of websites whose look/feel you admire, and tell us what you like about them." rows="3"></textarea>
-          <div class="hint">Don't worry if you don't have any — we'll bring ideas to you.</div>
+          <div class="hint">Don't worry if you don't have any â we'll bring ideas to you.</div>
         </div>
 
         <div class="field">
@@ -710,7 +710,7 @@ footer a {
       <!-- Step 4: Review & Submit -->
       <div class="form-section" data-step="4">
         <h3 class="section-title">Anything else?</h3>
-        <p class="section-desc">Last step — add any details we should know, then hit submit.</p>
+        <p class="section-desc">Last step â add any details we should know, then hit submit.</p>
 
         <div class="field">
           <label>Special features or integrations <span class="optional">(optional)</span></label>
@@ -844,10 +844,20 @@ footer a {
     return Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(el => el.value);
   }
 
+  // Read a cookie value by name (used for Meta _fbp / _fbc CAPI dedup)
+  function getCookie(name) {
+    const m = document.cookie.match(new RegExp('(^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[2]) : '';
+  }
+
   async function submitForm() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
     btn.textContent = 'Submitting...';
+
+    // CAPI dedup: same event_id is sent to both fbq() and the Worker so Meta
+    // dedupes the browser pixel against the server-side Lead event.
+    const capiEventId = 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
 
     const data = {
       plan: plan || 'unknown',
@@ -870,8 +880,30 @@ footer a {
       timeline: document.getElementById('timeline').value,
       referralSource: document.getElementById('referralSource').value,
       additionalNotes: document.getElementById('additionalNotes').value.trim(),
-      submittedAt: new Date().toISOString()
+      submittedAt: new Date().toISOString(),
+      _capi: {
+        eventId: capiEventId,
+        fbp: getCookie('_fbp'),
+        fbc: getCookie('_fbc'),
+        url: window.location.href
+      }
     };
+
+    // Meta Pixel: Lead is the conversion event for the full intake form.
+    // Pass eventID so the server-side CAPI Lead event dedupes against this one.
+    try {
+      if (typeof fbq === 'function') {
+        const value = (data.plan || '').toLowerCase() === 'pro' ? 2500
+                    : (data.plan || '').toLowerCase() === 'standard' ? 1500
+                    : 0;
+        fbq('track', 'Lead', {
+          content_name: 'Intake Form',
+          content_category: 'intake',
+          currency: 'USD',
+          value
+        }, { eventID: capiEventId });
+      }
+    } catch (e) {}
 
     try {
       // Submit to worker endpoint
