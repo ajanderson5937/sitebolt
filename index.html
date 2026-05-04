@@ -235,6 +235,28 @@ nav {
   text-transform: uppercase;
   margin-top: 4px;
 }
+.hero-testimonial {
+  margin-top: 36px;
+  padding: 20px 24px;
+  border-left: 3px solid var(--blue);
+  background: rgba(55,138,221,0.04);
+  border-radius: 0 8px 8px 0;
+}
+.hero-testimonial-quote {
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink);
+  font-style: italic;
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+.hero-testimonial-attr {
+  font-size: 13px;
+  color: var(--steel);
+  margin: 0;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
 /* HERO RIGHT = LEAD MAGNET */
 .hero-right {
   display: flex;
@@ -246,7 +268,7 @@ nav {
   overflow: hidden;
 }
 .hero-right::before {
-  content: 'GRADE';
+  content: 'BUILT';
   position: absolute;
   font-family: 'Inter', sans-serif;
   font-size: 200px;
@@ -745,15 +767,15 @@ footer {
     <li><a href="#engine">Content Engine</a></li>
     <li><a href="#work">Work</a></li>
     <li><a href="#pricing">Pricing</a></li>
-    <li><a href="#contact" class="nav-cta">GET A FREE GRADE</a></li>
+    <li><a href="#contact" class="nav-cta">GET FREE ANALYSIS</a></li>
   </ul>
 </nav>
 <!-- HERO -->
 <section class="hero">
   <div class="hero-left">
-    <div class="hero-eyebrow">For business owners who are done waiting</div>
+    <div class="hero-eyebrow">Websites for service businesses — built in 14 days</div>
     <h1 class="hero-headline">Your site.<br><em>Shipped.</em></h1>
-    <p class="hero-sub">Most small business websites repel customers before they ever reach out. We build sites that actually turn visitors into paying customers, then hand the whole thing over to you. No retainer, no lock-in, no monthly fees.</p>
+    <p class="hero-sub">Most service-business websites repel customers before they ever reach out. We build sites that book real jobs, then hand the whole thing over to you. No retainer, no lock-in, no monthly fees. You own it forever.</p>
     <div class="hero-stats">
       <div class="stat-item">
         <div class="stat-num">14</div>
@@ -768,20 +790,24 @@ footer {
         <div class="stat-label">One-Time, You Own It</div>
       </div>
     </div>
+    <div class="hero-testimonial">
+      <p class="hero-testimonial-quote">"Booked more jobs in the first month than the last six combined. Best $1,500 we've spent on the business."</p>
+      <p class="hero-testimonial-attr">— Revolution Epoxy, Northwoods, WI</p>
+    </div>
   </div>
-  <!-- LEAD MAGNET: FREE WEBSITE GRADE -->
+  <!-- LEAD MAGNET: FREE WEBSITE PREVIEW / GRADE -->
   <div class="hero-right">
     <div class="audit-widget">
       <div class="audit-widget-label">Free Instant Analysis</div>
-      <h2>Grade your<br>website.</h2>
-      <p>Get a real score on your mobile performance, SEO, speed, and conversion rate. Takes 10 seconds. Completely free.</p>
+      <h2>See what's<br>possible.</h2>
+      <p>Have a website? Get a real audit of mobile, SEO, and speed. Don't have one yet? We'll send a free preview of what we'd build for your business. Takes 10 seconds either way.</p>
       <div id="audit-form">
         <div class="audit-input-row">
           <input class="audit-input" type="email" id="heroEmail" placeholder="your@email.com" required>
-          <input class="audit-input" type="text" id="heroUrl" placeholder="yourwebsite.com (or skip if you don't have one)">
+          <input class="audit-input" type="text" id="heroUrl" placeholder="yourwebsite.com (skip if you don't have one yet)">
         </div>
-        <button class="audit-btn" onclick="runHeroAudit()" id="heroAuditBtn">Grade my website now</button>
-        <div class="audit-trust">No spam. Full report delivered in seconds.</div>
+        <button class="audit-btn" onclick="runHeroAudit()" id="heroAuditBtn">Get my free analysis</button>
+        <div class="audit-trust">No spam. Real human reads every one. Reply within 24 hours.</div>
       </div>
       <div id="audit-thanks" style="display:none; padding:32px 24px; text-align:center; background:rgba(55,138,221,0.08); border:1px solid rgba(55,138,221,0.25); border-radius:10px;">
         <div style="font-size:32px; margin-bottom:12px;">✓</div>
