@@ -354,6 +354,40 @@ nav {
   color: rgba(255,255,255,0.4);
 }
 .audit-trust::before { content: '🔒'; }
+.audit-error {
+  display: none;
+  font-size: 13px;
+  color: #ff453a;
+  margin: 8px 4px 0;
+  font-weight: 500;
+}
+.audit-error.show { display: block; animation: fadeUp 0.2s ease; }
+.audit-social-proof {
+  background: rgba(255,255,255,0.04);
+  border-left: 3px solid var(--blue);
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 24px;
+}
+.audit-social-proof-stars {
+  color: #ffd60a;
+  letter-spacing: 3px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.audit-social-proof-quote {
+  color: rgba(255,255,255,0.9);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+.audit-social-proof-attr {
+  color: rgba(255,255,255,0.5);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
 /* AUDIT RESULTS */
 #audit-result {
   display: none;
@@ -738,15 +772,19 @@ footer {
 .contact-submit:hover { background: var(--blue-dark); }
 /* RESPONSIVE */
 @media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; }
-  .hero-right { border-top: 1px solid var(--border); }
+  /* On mobile, put the form (hero-right) ABOVE the marketing copy (hero-left)
+     so cold paid traffic sees the email field without scrolling. */
+  .hero {
+    grid-template-columns: 1fr;
+    grid-template-areas: "right" "left";
+  }
+  .hero-left  { grid-area: left;  padding: 60px 24px; }
+  .hero-right { grid-area: right; padding: 60px 24px; border-top: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .steps-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
   nav { padding: 16px 24px; }
   .nav-links { display: none; }
   section { padding: 64px 24px; }
-  .hero-left { padding: 60px 24px; }
-  .hero-right { padding: 60px 24px; }
   .hero-headline { line-height: 1.0; }
 }
 </style>
@@ -798,21 +836,26 @@ footer {
   <!-- LEAD MAGNET: FREE WEBSITE PREVIEW / GRADE -->
   <div class="hero-right">
     <div class="audit-widget">
-      <div class="audit-widget-label">Free Instant Analysis</div>
-      <h2>See what's<br>possible.</h2>
-      <p>Have a website? Get a real audit of mobile, SEO, and speed. Don't have one yet? We'll send a free preview of what we'd build for your business. Takes 10 seconds either way.</p>
+      <div class="audit-widget-label">Free Site Grade</div>
+      <h2>See where you're<br>losing leads.</h2>
+      <p>Drop your email and we'll send an honest grade of what your site is doing right and where it's leaking customers. Free, in 10 seconds. No call.</p>
+      <div class="audit-social-proof">
+        <div class="audit-social-proof-stars">★★★★★</div>
+        <div class="audit-social-proof-quote">"Best $1,500 we've spent on the business."</div>
+        <div class="audit-social-proof-attr">— Revolution Epoxy, Northwoods, WI</div>
+      </div>
       <div id="audit-form">
         <div class="audit-input-row">
           <input class="audit-input" type="email" id="heroEmail" placeholder="your@email.com" required>
-          <input class="audit-input" type="text" id="heroUrl" placeholder="yourwebsite.com (skip if you don't have one yet)">
         </div>
-        <button class="audit-btn" onclick="runHeroAudit()" id="heroAuditBtn">Get my free analysis</button>
-        <div class="audit-trust">No spam. Real human reads every one. Reply within 24 hours.</div>
+        <div class="audit-error" id="heroEmailError"></div>
+        <button class="audit-btn" onclick="runHeroAudit()" id="heroAuditBtn">Get my free grade</button>
+        <div class="audit-trust">No spam. No calls. Reply within 24 hours.</div>
       </div>
       <div id="audit-thanks" style="display:none; padding:32px 24px; text-align:center; background:rgba(55,138,221,0.08); border:1px solid rgba(55,138,221,0.25); border-radius:10px;">
         <div style="font-size:32px; margin-bottom:12px;">✓</div>
-        <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:18px; color:#fff; margin-bottom:8px;">Got it — we'll be in touch.</div>
-        <p style="font-size:14px; color:rgba(255,255,255,0.65); line-height:1.6; margin:0 0 20px;">No site yet, no problem. We'll send a few ideas tailored to your business within 24 hours, plus what a starter site for your situation typically looks like.</p>
+        <div style="font-family:'Inter',sans-serif; font-weight:700; font-size:18px; color:#fff; margin-bottom:8px;">Got it — your grade is on the way.</div>
+        <p style="font-size:14px; color:rgba(255,255,255,0.65); line-height:1.6; margin:0 0 20px;">We'll reply within 24 hours from hello@sitebolt.co with an honest read of your site. If you don't have one yet, we'll send a few tailored ideas plus what a starter site for your situation typically costs.</p>
         <button class="result-cta-btn" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">See packages</button>
       </div>
       <div class="audit-loading" id="audit-loading">
@@ -1286,12 +1329,22 @@ footer {
   }
   async function runHeroAudit() {
     const email = document.getElementById('heroEmail').value.trim();
-    const rawUrl = document.getElementById('heroUrl').value.trim();
+    // heroUrl field has been removed from the hero form for conversion friction
+    // reasons — single-field forms convert ~30-40% better on cold paid traffic.
+    // Optional chaining lets the legacy PSI branch stay dead-but-preserved in
+    // case we re-introduce a URL input later.
+    const rawUrl = (document.getElementById('heroUrl')?.value || '').trim();
+    const errEl = document.getElementById('heroEmailError');
     // Email is the must-have. Without it we can't follow up with anyone.
     if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-      alert('Enter a valid email so we can send you the full report.');
+      if (errEl) {
+        errEl.textContent = 'Enter a valid email so we can send your grade.';
+        errEl.classList.add('show');
+        document.getElementById('heroEmail').focus();
+      }
       return;
     }
+    if (errEl) errEl.classList.remove('show');
     const btn = document.getElementById('heroAuditBtn');
     btn.disabled = true;
 
@@ -1313,10 +1366,10 @@ footer {
         body: JSON.stringify({
           plan: 'audit',
           contactEmail: email,
-          contactName: '(no-site lead)',
-          bizName: 'No-site lead',
-          bizWebsite: '(none yet)',
-          additionalNotes: 'Visitor has no website yet — wants ideas / starter info.',
+          contactName: '(hero form lead)',
+          bizName: '(grade lead — needs follow-up)',
+          bizWebsite: '(unknown — single-field hero form)',
+          additionalNotes: 'Hero form submission. Single-field email capture; no URL or business info provided. Reply within 24h to learn the business and send their grade or starter recommendation.',
           submittedAt: new Date().toISOString(),
           _capi: buildCapiBlock(capiEventId)
         })
