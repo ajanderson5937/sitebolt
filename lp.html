@@ -278,8 +278,8 @@ a { color: inherit; text-decoration: none; }
 /* LOADING STATE */
 .audit-loading {
   display: none;
-  text-align: center;
-  padding: 32px 16px;
+  text-align: left;
+  padding: 24px 4px 8px;
 }
 .audit-loading.show { display: block; }
 .audit-spinner {
@@ -299,12 +299,83 @@ a { color: inherit; text-decoration: none; }
   text-transform: uppercase;
   color: var(--ink);
   margin-bottom: 6px;
+  text-align: center;
 }
 .audit-loading-sub {
   font-size: 13px;
   color: var(--steel);
   line-height: 1.5;
+  text-align: center;
+  margin-bottom: 20px;
 }
+/* Progressive step indicator — makes the 25–30s wait feel active */
+.audit-steps {
+  margin-top: 4px;
+  padding: 0;
+  list-style: none;
+}
+.audit-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  margin: 6px 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  transition: all 0.25s ease;
+}
+.audit-step .step-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+.audit-step .step-label { font-weight: 500; }
+.audit-step .step-detail {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+.audit-step.active {
+  background: rgba(55,138,221,0.06);
+  border-color: rgba(55,138,221,0.3);
+  color: var(--ink);
+}
+.audit-step.active .step-icon {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(55,138,221,0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(55,138,221,0); }
+}
+.audit-step.done {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--steel);
+}
+.audit-step.done .step-icon {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+.audit-step.done .step-icon::after { content: '✓'; }
+.audit-step.done .step-icon span { display: none; }
 
 /* RESULT REVEAL — the "oh shit" moment */
 .audit-result {
@@ -826,8 +897,25 @@ footer a { color: var(--steel); }
       <!-- STAGE 2: LOADING -->
       <div class="audit-loading" id="stage-loading">
         <div class="audit-spinner"></div>
-        <div class="audit-loading-text">Grading your site</div>
-        <div class="audit-loading-sub">Pulling Google PageSpeed data,<br>checking SEO, mobile, and speed signals…</div>
+        <div class="audit-loading-text">Running your audit</div>
+        <div class="audit-loading-sub">Takes about 30 seconds.<br>We're pulling real data, not guessing.</div>
+        <ul class="audit-steps" id="auditSteps">
+          <li class="audit-step" id="step-psi">
+            <div class="step-icon"><span>1</span></div>
+            <div class="step-label">Pulling real Google PageSpeed data</div>
+            <div class="step-detail" id="step-psi-detail">~20s</div>
+          </li>
+          <li class="audit-step" id="step-claude">
+            <div class="step-icon"><span>2</span></div>
+            <div class="step-label">Reading your scores like a human</div>
+            <div class="step-detail" id="step-claude-detail">~6s</div>
+          </li>
+          <li class="audit-step" id="step-render">
+            <div class="step-icon"><span>3</span></div>
+            <div class="step-label">Building your report</div>
+            <div class="step-detail" id="step-render-detail"></div>
+          </li>
+        </ul>
       </div>
 
       <!-- STAGE 3: RESULT + EMAIL GATE -->
@@ -1039,6 +1127,26 @@ footer a { color: var(--steel); }
     });
   }
 
+  // Audit step indicator — animates the progressive checklist while the grade runs.
+  // States: 'pending' (default), 'active' (currently running, pulses), 'done' (checkmark).
+  function setStep(stepId, state, detail) {
+    const el = document.getElementById('step-' + stepId);
+    if (!el) return;
+    el.classList.remove('active', 'done');
+    if (state === 'active') el.classList.add('active');
+    if (state === 'done') el.classList.add('done');
+    if (detail !== undefined) {
+      const d = document.getElementById('step-' + stepId + '-detail');
+      if (d) d.textContent = detail;
+    }
+  }
+  function resetSteps() {
+    ['psi','claude','render'].forEach(id => setStep(id, 'pending'));
+    setStep('psi', 'pending', '~20s');
+    setStep('claude', 'pending', '~6s');
+    setStep('render', 'pending', '');
+  }
+
   function scrollToGrade() {
     document.getElementById('card').scrollIntoView({behavior:'smooth', block:'center'});
     setTimeout(() => {
@@ -1103,7 +1211,10 @@ footer a { color: var(--steel); }
 
     const btn = document.getElementById('lpGradeBtn');
     btn.disabled = true;
+    resetSteps();
     setStage('loading');
+    setStep('psi', 'active');
+    const t0 = Date.now();
 
     try {
       // Step 1: real Google PageSpeed scores
@@ -1129,6 +1240,11 @@ footer a { color: var(--steel); }
       const overall = Math.round((perfScore + seoScore + mobileScore) / 3);
       lead.scores = { overall, mobile: mobileScore, seo: seoScore, speed: speedScore };
 
+      // PSI done — tick step 1, activate step 2
+      const psiElapsed = ((Date.now() - t0) / 1000).toFixed(0);
+      setStep('psi', 'done', psiElapsed + 's');
+      setStep('claude', 'active');
+
       // Step 2: Claude turns real PSI numbers into specific issues + pitch
       const prompt = `You are a website conversion expert for Sitebolt.co. A small business owner just graded their site: ${url}
 
@@ -1148,11 +1264,16 @@ Return ONLY valid JSON, no markdown. Use EXACTLY these numeric scores — do not
   "seo": ${seoScore},
   "speed": ${speedScore},
   "issues": [
-    { "severity": "critical|high", "text": "specific issue grounded in the real metrics above" }
+    { "severity": "critical|high|medium", "text": "specific item grounded in the real metrics above" }
   ],
-  "pitch": "one sentence about how Sitebolt could fix these issues, referencing the real scores."
+  "pitch": "one sentence about how Sitebolt could lift these scores, referencing the real numbers."
 }
-Generate 3-4 issues based strictly on the real metrics. If a score is already >=80, do NOT call that area a problem. Focus on what a business owner cares about: lost customers, slow loading, poor mobile. Be honest, not alarmist.`;
+Generate exactly 3 items based strictly on the real metrics. ALWAYS find 3 — even on high-scoring sites, surface the remaining opportunities. Severity rules:
+- score < 50 → "critical"
+- score 50–79 → "high"
+- score 80–94 → "medium" (phrase as opportunity: e.g. "Your SEO is at 88 — adding meta descriptions and structured data is what gets it to 95+ and bumps you up the search results")
+- score >= 95 → still surface the remaining gap: e.g. "Speed is at 97 but LCP at ${lcp ? (lcp/1000).toFixed(1)+'s' : 'n/a'} means mobile users on slow connections still wait — there's room to compress further"
+Never tell the owner "you're fine" or "nothing to fix." A score is never a finish line — there's always opportunity. Be honest, not alarmist, but always concrete about what's costing them money or leads.`;
 
       const claudeRes = await fetch('https://api.sitebolt.co/claude', {
         method: 'POST',
@@ -1167,6 +1288,10 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already >=
       const claudeData = await claudeRes.json();
       const raw = claudeData.content?.[0]?.text || '{}';
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+      // Claude done — tick step 2, activate step 3 (render)
+      setStep('claude', 'done');
+      setStep('render', 'active');
 
       // Force real scores regardless of what Claude returned
       parsed.overall = overall;
@@ -1189,11 +1314,15 @@ Generate 3-4 issues based strictly on the real metrics. If a score is already >=
       sEl.textContent = seoScore;    scoreColor(sEl, seoScore);
       spEl.textContent = speedScore; scoreColor(spEl, speedScore);
 
-      // Tailor the result headline based on overall score
+      // Tailor the result headline — always frame toward conversion, never "you're fine"
       const head = document.getElementById('resultHeadline');
-      if (overall < 50) head.textContent = "Your site has serious leaks.";
-      else if (overall < 80) head.textContent = "Your site has some leaks.";
-      else head.textContent = "Your site is in decent shape.";
+      if (overall < 50) head.textContent = "Your site is leaking serious money.";
+      else if (overall < 80) head.textContent = "Your site is leaving customers on the table.";
+      else if (overall < 90) head.textContent = "Solid score. But " + (100 - overall) + " points are still costing you leads.";
+      else head.textContent = "Strong score. Here's where the last " + (100 - overall) + " points are bleeding.";
+
+      // Render step done — every step ticked before the result reveal
+      setStep('render', 'done');
 
       // Issues
       const issueHtml = (parsed.issues || []).map(i => `
